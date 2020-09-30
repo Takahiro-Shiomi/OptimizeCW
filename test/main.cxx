@@ -9,12 +9,24 @@
 #include <stdio.h>
 #include <string.h>
 #include <typeinfo>
-#include "TString.h"
-#include <TFile.h>
 #include <TH2.h>
+
+#include "/home/shiomi/RootUtils/src/rootlogon.C"
+#include <TROOT.h>
+#include <TFile.h>
 
 main(int argc, char *argv[])
 {
+    rootlogon();
+    Int_t palette[36];
+    palette[0] = 0;
+    int color=50;
+    for(int i=1;i!=36;i++){
+        if(i%2==1){color = color+1;}
+        if(i%2==0){color = color+2;}
+        palette[i] = color;
+    }
+    gStyle->SetPalette(36,palette);
     std::cout<<"<<Run START>>"<<std::endl;
 
     std::string InputFile="";
@@ -40,7 +52,7 @@ main(int argc, char *argv[])
     //Optimize CW
     CWoptimizer->OptimizeCWdata(source,sectorID,RoI,CW,file);
     //Draw
-    CWoptimizer->DrawCWdata("./../pdf/Draw_" + PdfLabel + ".pdf");
+    CWoptimizer->DrawCWdata("./../pdf/Draw_" + PdfLabel + ".pdf",sectorID,RoI,CW);
 
     fout->Write();
     //Delete Histgram

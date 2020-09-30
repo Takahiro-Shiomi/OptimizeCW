@@ -21,49 +21,61 @@ void optimizeCW::OptimizeCWdata(std::string source,int sectorID,int RoI,int CW, 
 
     std::cout<<"<<Optimize CW>>"<<std::endl;
 
+    TH2I *LowMap = new TH2I("LowMap",";#DeltaR;#Delta#phi",31,-15.5,15.5,31,-15.5,15.5);
+    TH2I *HighMap = new TH2I("highMap",";#DeltaR;#Delta#phi",31,-15.5,15.5,31,-15.5,15.5);
+    TH2F *h_Low = new TH2F("h_Low",";#Delta#phi;#DeltaR",15,-7.5,7.5,31,-15.5,15.5);
+    TH2F *h_High = new TH2F("h_High",";#Delta#phi;#DeltaR",15,-7.5,7.5,31,-15.5,15.5);
+
     int mapID;
-    if(source=="Ec"){mapID = RoI + (sectorID%6)*148;}
-    if(source=="Fw"){mapID = RoI + (sectorID%6)*64;} ///?
+    for(int sec=0;sec!=sectorID;sec++){
+    for(int roi=0;roi!=RoI;roi++){
+    if(source=="Ec"){mapID = roi + (sectorID%6)*148;}
+    if(source=="Fw"){mapID = roi + (sectorID%6)*64;} ///?
 
-    std::stringstream MAP,PT;
-    MAP << std::setw(3) << std::setfill('0') << mapID;
-    PT << "_pT" << std::setw(2) << std::setfill('0') << CW;
-    std::string HistName="HitMap_" + source + MAP.str() + PT.str();
-    std::cout << "Optimize CW: " << HistName.c_str() << std::endl;
-    HitMap = (TH2I*)file->Get(HistName.c_str());
-    this->HitMapCleaner(HitMap);
+    for(int cw=0;cw!=CW;cw++){
+        std::stringstream MAP,PT;
+        MAP << std::setw(3) << std::setfill('0') << mapID;
+        PT << "_pT" << std::setw(2) << std::setfill('0') << cw;
+        std::string HistName="HitMap_" + source + MAP.str() + PT.str();
+        TH2I *HitMap = (TH2I*)file->Get(HistName.c_str());
+        this->HitMapCleaner(HitMap);
 
-    std::string BottomName="";
-    if(CW<=22){BottomName="HitMap_" + source + MAP.str() + "_pT00";}
-    else if(CW>22){
-        std::stringstream BPT;
-        BPT << "_pT" << std::setw(2) << std::setfill('0') << (2*CW)-39;
-        BottomName="HitMap_" + source + MAP.str() + BPT.str();
+        std::string BottomName="";
+        if(cw<=22){BottomName="HitMap_" + source + MAP.str() + "_pT00";}
+        else if(cw>22){
+            std::stringstream BPT;
+            BPT << "_pT" << std::setw(2) << std::setfill('0') << (2*cw)-39;
+            BottomName="HitMap_" + source + MAP.str() + BPT.str();
+        }
+        TH2I *BottomMap = (TH2I*)file->Get(BottomName.c_str());
+        this->HitMapCleaner(BottomMap);
+
+        std::string TopName = "";
+        if(cw>22){TopName="HitMap_" + source + MAP.str() + "_pT39";}
+        else if(cw<=22 && cw>5){
+            std::stringstream TPT;
+            TPT << "_pT" << std::setw(2) << std::setfill('0') << (2*cw)-5;
+            TopName="HitMap_" + source + MAP.str() + TPT.str();
+        }
+        else if(cw<=5){TopName="HitMap_" + source + MAP.str() + "_pT08";}
+        TH2I *TopMap = (TH2I*)file->Get(TopName.c_str());
+        this->HitMapCleaner(TopMap);
+
+        LowMap->Add(BottomMap,1);
+        LowMap->Add(HitMap,-1);
+
+        HighMap->Add(HitMap,1);
+        HighMap->Add(TopMap,-1);
+
+        this->FillHitMap(LowMap, HighMap, h_Low, h_High, sec, roi, cw);
+
+        LowMap->Reset();
+        HighMap->Reset();
+        h_Low->Reset();
+        h_High->Reset();
     }
-    std::cout << "Bottom CW: " << BottomName.c_str() << std::endl;
-    BottomMap = (TH2I*)file->Get(BottomName.c_str());
-    this->HitMapCleaner(BottomMap);
-
-    std::string TopName = "";
-    if(CW>22){TopName="HitMap_" + source + MAP.str() + "_pT39";}
-    else if(CW<=22 && CW>5){
-        std::stringstream TPT;
-        TPT << "_pT" << std::setw(2) << std::setfill('0') << (2*CW)-5;
-        TopName="HitMap_" + source + MAP.str() + TPT.str();
     }
-    else if(CW<=5){TopName="HitMap_" + source + MAP.str() + "_pT08";}
-    std::cout << "Top CW: " << TopName.c_str() << std::endl;
-    TopMap = (TH2I*)file->Get(TopName.c_str());
-    this->HitMapCleaner(TopMap);
-
-    LowMap->Add(BottomMap,1);
-    LowMap->Add(HitMap,-1);
-
-    HighMap->Add(HitMap,1);
-    HighMap->Add(TopMap,-1);
-
-    this->FillHitMap();
-
+    }
 }
 
 void optimizeCW::HitMapCleaner(TH2I *hs){
@@ -130,8 +142,9 @@ void optimizeCW::HitMapCleanerStage2(TH2F *hs){
   }
 }
 
-void optimizeCW::FillHitMap()
+void optimizeCW::FillHitMap(TH2I *LowMap, TH2I *HighMap, TH2F *h_Low, TH2F *h_High,int sec,int roi, int cw)
 {
+
     //int YbinN = LowMap->GetYaxis()->GetNbins();
     //int XbinN = LowMap->GetXaxis()->GetNbins();
     int YbinN = 15;
@@ -148,7 +161,6 @@ void optimizeCW::FillHitMap()
     }
     float TotalLow = h_Low->Integral();
     float TotalHigh = h_High->Integral();
-    std::cout<<TotalLow<<"__"<<TotalHigh<<std::endl;
     if(TotalLow>=TotalHigh){h_Low->Scale(TotalHigh/TotalLow);}
     else if(TotalLow<TotalHigh){h_High->Scale(TotalLow/TotalHigh);}
 
@@ -159,9 +171,14 @@ void optimizeCW::FillHitMap()
             float l = h_Low->GetBinContent(Ybin,Xbin);
             float x = h/sqrt(l*l + h*h);
 
-            h_Ratio->SetBinContent(Ybin,Xbin,x);
-            if(x>0.2){h_RenewMap->SetBinContent(Ybin,Xbin,x);}
+            if(x>0.2){h_RenewMap[sec][roi][cw]->SetBinContent(Ybin,Xbin,x);}
         }
     }
-    this->HitMapCleanerStage2(h_RenewMap);
+    this->HitMapCleanerStage2(h_RenewMap[sec][roi][cw]);
+
+    for(int Xbin=1;Xbin!=XbinN+1;Xbin++){
+        for(int Ybin=1;Ybin!=YbinN+1;Ybin++){
+            if(h_RenewMap[sec][roi][cw]->GetBinContent(Ybin,Xbin)!=0){h_RenewMap[sec][roi][cw]->SetBinContent(Ybin,Xbin,cw);}
+        }
+    }
 }

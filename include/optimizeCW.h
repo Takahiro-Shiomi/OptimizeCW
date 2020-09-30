@@ -26,23 +26,14 @@ class optimizeCW{
 
   void DeleteHist();
 
-  void DrawCWdata(TString pdf);
+  void DrawCWdata(TString pdf,int sec,int roi,int cw);
 
-  void FillHitMap();
+  void FillHitMap(TH2I *LowMap,TH2I *HighMap,TH2F *h_Low,TH2F *h_High,int sec,int roi,int cw);
 
  private:
 
-  TH2I *HitMap;
-  TH2I *BottomMap;
-  TH2I *TopMap;
-  TH2I *LowMap;
-  TH2I *HighMap;
-
-  TH2F *h_Low;
-  TH2F *h_High;
-
-  TH2F *h_Ratio;
-  TH2F *h_RenewMap;
+  TH2F *h_RenewMap[6][148][35];
+  //TH2F *h_RenewMap[6][148][35];
 
 };
 
